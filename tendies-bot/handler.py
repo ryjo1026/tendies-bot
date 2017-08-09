@@ -5,7 +5,6 @@ import os
 import urllib
 import urllib2
 
-
 logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -51,7 +50,7 @@ def main(event, context):
     diningHalls = ['Bursley Dining Hall', 'Mosher Jordan Dining Hall']
 
     # Items to alert for "formal name":"nickname"
-    watchedItems = {"chicken tenders":"Tendies", "beef hot dog":"Hot dogs"}
+    watchedItems = {"chicken tenders":"Tendies"}
 
     # Get full meal data from proxied API
     url = 'http://michigantendies.herokuapp.com/'
@@ -62,9 +61,10 @@ def main(event, context):
     mealData = json.loads(result)
 
     for item, nickname in watchedItems.items():
+        logger.info('----------Checking for %s----------', item)
         if item in mealData["items"]:
             itemInfo = mealData["items"][item]
-            logger.info('Found entry for %s; checking dining halls/times-----------------------------------------', item)
+            logger.info('Found entry; checking dining halls/times')
             for diningHall in diningHalls:
                 checkDiningHall(diningHall, itemInfo, nickname)
 
