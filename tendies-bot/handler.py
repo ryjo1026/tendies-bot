@@ -10,6 +10,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def callGroupMe(message):
+    """For each bot, use urllib to open a post request to the API"""
     ids = os.environ['botIDs'].split()
 
     for bot in ids:
@@ -17,11 +18,14 @@ def callGroupMe(message):
         values = {'text': message, 'bot_id': bot}
         data = urllib.urlencode(values)
         req = urllib2.Request(url, data)
-        response = urllib2.urlopen(req)
-        result = response.read()
-        print result
+        urllib2.urlopen(req)
 
 def checkDiningHall(hall, itemInfo, nickname):
+    """
+    Recieves itemInfo for a specific dining hall and checks for being served tomorrow. Constructs message
+    and calls GroupMe if Found
+    """
+
     # Get time for tomorrow
     tomorrow = datetime.datetime.today()+datetime.timedelta(days=1)
     tomorrow = str(tomorrow)[:-16]
@@ -32,18 +36,19 @@ def checkDiningHall(hall, itemInfo, nickname):
         times = itemInfo["diningHallMatches"][hall]["mealTimes"]
         logger.info('Found times in %s: %s', hall, times)
         for key in times.keys():
+            # Compare truncated time to tommoroe
             if str(key[:-10]) == tomorrow:
                 meal = times[key]["mealNames"]
+                # If there are multiple meals, comma separate. Otherwise just convert to lower
                 if len(meal) > 1:
                     meal = ', '.join(meal)
                     meal = meal.lower()
-                elif meal == ['LUNCH']:
-                    meal = "lunch"
-                elif meal == ['DINNER']:
-                    meal = "dinner"
+                else:
+                    meal = meal.lower()
+                # Make hall name friendly and create message string
                 hallNickname = hall.replace(' Dining Hall', '')
                 message = '{} for {} in {} tomorrow'.format(nickname, meal, hallNickname)
-                logger.info('%s being served %s', nickname, tomorrow)
+                logger.info('Sending the following message to GroupMe: %s', message)
                 callGroupMe(message)
 
 def main(event, context):
@@ -56,15 +61,16 @@ def main(event, context):
     url = 'http://michigantendies.herokuapp.com/'
     req = urllib2.Request(url)
     response = urllib2.urlopen(req)
-    result = response.read()
 
-    mealData = json.loads(result)
+    mealData = json.loads(response.read())
 
+    # Search for watched items in API one by one
     for item, nickname in watchedItems.items():
         logger.info('----------Checking for %s----------', item)
         if item in mealData["items"]:
             itemInfo = mealData["items"][item]
             logger.info('Found entry; checking dining halls/times')
+            # If matching dining hall, continue checks
             for diningHall in diningHalls:
                 checkDiningHall(diningHall, itemInfo, nickname)
 
